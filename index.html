@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Банковская карта — 3D-лендинг</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600&family=Manrope:wght@400;500;600&display=swap&subset=cyrillic" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="gl" aria-hidden="true"></canvas><div class="poster"></div>
+
+<nav><b>[уточнить: название карты]</b><a class="btn ghost" href="#order">Оформить</a></nav>
+
+<main id="story">
+  <section class="step hero"><div class="t">
+    <h1>Карта, которую приятно держать в руке</h1>
+    <p>Оплата одним касанием, управление в приложении и понятные условия.</p>
+    <a class="btn" href="#order">Оформить карту</a>
+  </div></section>
+  <section class="step r"><div class="t">
+    <h2>Коснулись — оплатили</h2>
+    <p>Поднесите карту к терминалу, и покупка проходит за секунды. Лимит бесконтактной оплаты без PIN: [уточнить: лимит].</p>
+  </div></section>
+  <section class="step"><div class="t">
+    <h2>Всё важное — на обороте и в приложении</h2>
+    <p>Реквизиты, блокировка и лимиты под рукой. Разберётесь без инструкции.</p>
+  </div></section>
+  <section class="step r"><div class="t">
+    <h2>Чип защищает каждую операцию</h2>
+    <p>Платёж подтверждается чипом, а не только данными на карте. Дополнительная защита: [уточнить: 3-D Secure, уведомления].</p>
+  </div></section>
+  <section class="step last">
+    <h2>Выберите свой цвет</h2>
+    <div class="sw" id="sw" role="group" aria-label="Цвет карты"></div>
+  </section>
+</main>
+
+<section class="solid">
+  <h2>Что внутри карты</h2>
+  <div class="cards">
+    <div><h3>Бесконтактная оплата</h3><p>Магазины, транспорт, кафе — достаточно приложить карту.</p></div>
+    <div><h3>Защита платежей</h3><p>Чип и подтверждение операций. Подробности: [уточнить].</p></div>
+    <div><h3>Управление в приложении</h3><p>Блокировка, лимиты и история операций в одном месте.</p></div>
+    <div><h3>Выгода</h3><p>Кэшбэк и бонусы: [уточнить: условия и размер].</p></div>
+  </div>
+</section>
+
+<section class="solid" style="padding-top:0">
+  <h2>Характеристики</h2>
+  <div class="specs">
+    <div><span>Платёжная система</span><b>[уточнить]</b></div>
+    <div><span>Формат</span><b>85,6 × 54 мм</b></div>
+    <div><span>Материал</span><b>[уточнить]</b></div>
+    <div><span>Срок действия</span><b>[уточнить]</b></div>
+    <div><span>Выпуск</span><b>[уточнить: стоимость]</b></div>
+    <div><span>Обслуживание</span><b>[уточнить: стоимость]</b></div>
+  </div>
+</section>
+
+<section class="solid cta" id="order">
+  <h2>Карта будет у вас уже на этой неделе</h2>
+  <a class="btn" href="#">Оформить карту</a>
+</section>
+
+<footer>[уточнить: название банка, лицензия, юридическая информация]</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+  (function () {
+      var VARS = [{ n: 'Графит', c: 0x262a35, ink: '#eef0f7', css: '#262a35' }, { n: 'Лёд', c: 0xdbe3ee, ink: '#1a2132', css: '#dbe3ee' }, { n: 'Лиловый', c: 0x8b79e8, ink: '#ffffff', css: '#8b79e8' }];
+      var cur = 0, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var W = 3.4, H = 2.14, D = .04;
+      var cv = document.getElementById('gl'), R;
+      try {
+          R = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true });
+      }
+      catch (e) {
+          R = null;
+      }
+      if (!R) {
+          document.body.classList.add('nogl');
+          buildSw(function () { });
+          return;
+      }
+
+      R.setPixelRatio(Math.min(devicePixelRatio, 2));
+      R.outputEncoding = THREE.sRGBEncoding;
+      R.toneMapping = THREE.ACESFilmicToneMapping;
+      R.toneMappingExposure = 1.05;
+      var scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(32, 1, .1, 50);
+      cam.position.set(0, 0, 8.5);
+
+      /* окружение без внешних файлов */
+      (function () {
+          var e = new THREE.Scene();
+          e.add(new THREE.Mesh(new THREE.SphereGeometry(20, 24, 12), new THREE.MeshBasicMaterial({ color: 0x1a1c30, side: THREE.BackSide })));
+          function p(w, h, x, y, z, v, c) { var m = new THREE.MeshBasicMaterial({ color: c || 0xffffff, side: THREE.DoubleSide }); m.color.multiplyScalar(v); var o = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); o.position.set(x, y, z); o.lookAt(0, 0, 0); e.add(o); }
+          p(10, 3, 0, 9, 4, 6);
+          p(3, 8, -9, 1, 3, 3, 0xcfd8ff);
+          p(3, 8, 9, 0, -3, 4, 0xe6d8ff);
+          p(8, 2, 0, -7, 5, 1.5, 0xb9a7ff);
+          var pm = new THREE.PMREMGenerator(R);
+          scene.environment = pm.fromScene(e, .04).texture;
+          pm.dispose();
+      })();
+      var key = new THREE.DirectionalLight(0xffe6cc, 1.6);
+      key.position.set(3, 4, 6);
+      var fill = new THREE.DirectionalLight(0xbcd0ff, .6);
+      fill.position.set(-5, 0, 4);
+      var rim = new THREE.DirectionalLight(0xb9a7ff, 1.4);
+      rim.position.set(-2, 3, -5);
+      scene.add(key, fill, rim);
+
+      var rr = .17, s = new THREE.Shape(), x = -W / 2, y = -H / 2;
+      s.moveTo(x + rr, y);
+      s.lineTo(x + W - rr, y);
+      s.quadraticCurveTo(x + W, y, x + W, y + rr);
+      s.lineTo(x + W, y + H - rr);
+      s.quadraticCurveTo(x + W, y + H, x + W - rr, y + H);
+      s.lineTo(x + rr, y + H);
+      s.quadraticCurveTo(x, y + H, x, y + H - rr);
+      s.lineTo(x, y + rr);
+      s.quadraticCurveTo(x, y, x + rr, y);
+      var g = new THREE.ExtrudeGeometry(s, { depth: D, bevelEnabled: true, bevelThickness: .012, bevelSize: .012, bevelSegments: 3, curveSegments: 10 });
+      g.translate(0, 0, -D / 2);
+      var bodyM = new THREE.MeshPhysicalMaterial({ color: VARS[0].c, metalness: .65, roughness: .3, clearcoat: 1, clearcoatRoughness: .12 });
+      var card = new THREE.Group();
+      card.add(new THREE.Mesh(g, bodyM));
+
+      /* принт: лицо и оборот */
+      var fc = document.createElement('canvas');
+      fc.width = 1024;
+      fc.height = 646;
+      var bc = document.createElement('canvas');
+      bc.width = 1024;
+      bc.height = 646;
+      var ft = new THREE.CanvasTexture(fc), bt = new THREE.CanvasTexture(bc);
+      ft.encoding = bt.encoding = THREE.sRGBEncoding;
+      ft.anisotropy = bt.anisotropy = 8;
+
+      function paint() {
+          var ink = VARS[cur].ink, c = fc.getContext('2d');
+          c.clearRect(0, 0, 1024, 646);
+          c.fillStyle = ink;
+          c.textBaseline = 'alphabetic';
+          c.font = '500 54px Manrope,sans-serif';
+          c.fillText('•••• •••• •••• ••••', 70, 470);
+          c.font = '500 30px Manrope,sans-serif';
+          c.globalAlpha = .8;
+          c.fillText('АН МАКСИМ', 70, 556);
+          c.fillText('12/30', 830, 556);
+          c.globalAlpha = 1;
+          c.strokeStyle = ink;
+          c.lineWidth = 7;
+          c.lineCap = 'round';
+          for (var i = 1; i <= 3; i++) {
+              c.beginPath();
+              c.arc(850, 150, i * 20, -.75, .75);
+              c.stroke();
+          }
+          var b = bc.getContext('2d');
+          b.clearRect(0, 0, 1024, 646);
+          b.fillStyle = ink;
+          b.globalAlpha = .85;
+          b.font = '500 30px Manrope,sans-serif';
+          b.fillText('[уточнить: название банка]', 70, 110);
+          b.globalAlpha = .4;
+          b.fillRect(70, 150, 884, 2);
+          b.globalAlpha = .85;
+          b.font = '500 26px Manrope,sans-serif';
+          b.fillText('Поддержка: [уточнить: телефон]', 70, 560);
+          b.fillStyle = 'rgba(255,255,255,.92)';
+          b.fillRect(70, 230, 520, 90);
+          b.fillStyle = '#222';
+          b.font = 'italic 40px Manrope,sans-serif';
+          b.fillText('Подпись', 90, 290);
+          ft.needsUpdate = bt.needsUpdate = true;
+      }
+
+      paint();
+
+      function plane(t, z, ry) {
+          var m = new THREE.Mesh(new THREE.PlaneGeometry(W, H), new THREE.MeshPhysicalMaterial({ map: t, transparent: true, roughness: .35, metalness: 0, clearcoat: 1, depthWrite: false }));
+          m.position.z = z;
+          m.rotation.y = ry;
+          return m;
+      }
+
+      card.add(plane(ft, D / 2 + .0135, 0), plane(bt, -D / 2 - .0135, Math.PI));
+
+      /* чип — настоящий объём */
+      var chip = new THREE.Mesh(new THREE.BoxGeometry(.52, .4, .018), new THREE.MeshPhysicalMaterial({ color: 0xd9c08a, metalness: 1, roughness: .22, clearcoat: .6 }));
+      chip.position.set(-W / 2 + .62, .28, D / 2 + .02);
+      card.add(chip);
+      var ln = new THREE.MeshBasicMaterial({ color: 0x7b6a3c });
+      [[.52, .012, 0, .07], [.52, .012, 0, -.07], [.012, .4, 0, 0]].forEach(function (a) { var l = new THREE.Mesh(new THREE.BoxGeometry(a[0], a[1], .002), ln); l.position.set(chip.position.x + a[2], chip.position.y + a[3], D / 2 + .0295); card.add(l); });
+      scene.add(card);
+
+      /* состояние сцены, которым управляет скролл */
+      var st = { x: 0, y: 0, rx: -.12, ry: .35, s: 1 }, k = 1, mx = 0, my = 0, pmx = 0, pmy = 0;
+
+      function resize() { var w = innerWidth, h = innerHeight; R.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); k = w < 700 ? 0 : 1; }
+      addEventListener('resize', resize);
+      resize();
+      addEventListener('pointermove', function (e) { mx = e.clientX / innerWidth - .5; my = e.clientY / innerHeight - .5; });
+      gsap.registerPlugin(ScrollTrigger);
+
+      function mobile() { return innerWidth < 700; }
+      var M = mobile(), e = 'power2.inOut';
+      st.x = M ? 0 : 1.4;
+      st.y = M ? 1 : 0;
+      var tl = gsap.timeline({ scrollTrigger: { trigger: '#story', start: 'top top', end: 'bottom bottom', scrub: .8 } });
+      tl.to(st, { x: M ? 0 : -1.5, y: M ? 1 : .1, rx: .1, ry: -.7, s: 1, duration: 1, ease: e })
+          .to(st, { x: M ? 0 : 1.5, y: M ? 1 : 0, rx: -.05, ry: Math.PI + .35, s: 1, duration: 1, ease: e })
+          .to(st, { x: M ? 0 : -1.2, y: M ? .9 : -.1, rx: -.45, ry: Math.PI * 2 + .15, s: M ? 1.4 : 1.55, duration: 1, ease: e })
+          .to(st, { x: 0, y: .5, rx: .05, ry: Math.PI * 2 + .45, s: 1.05, duration: 1, ease: e });
+      var jt = null;
+      window.cardJump = {
+          start: function (ms) {
+              tl.scrollTrigger.disable(false);
+              st.ry = st.ry % (Math.PI * 2);
+              jt = gsap.to(st, { x: 0, y: .5, rx: .05, ry: .45, s: 1.05, duration: Math.min(1.2, ms / 1000), ease: 'power2.out' });
+          },
+          end: function () { if (jt)
+              jt.kill(); st.x = 0; st.y = .5; st.rx = .05; st.ry = Math.PI * 2 + .45; st.s = 1.05; tl.scrollTrigger.enable(); }
+      };
+      var t0 = performance.now(), vis = true;
+      new IntersectionObserver(function (e) { vis = e[0].isIntersecting; }, { threshold: 0 }).observe(document.getElementById('story'));
+
+      function loop() {
+          requestAnimationFrame(loop);
+          if (!vis && scrollY > innerHeight * 5)
+              return;
+          var t = (performance.now() - t0) / 1000, ix = 0, iy = 0, iz = 0, px = 0, py = 0;
+          if (!reduce) {
+              pmx += (mx - pmx) * .05;
+              pmy += (my - pmy) * .05;
+              ix = Math.sin(t * .6) * .04;
+              iy = Math.sin(t * .45) * .06;
+              iz = Math.sin(t * .8) * .012;
+              px = pmy * .18;
+              py = pmx * .28;
+          }
+          card.position.set(st.x, st.y + Math.sin(t * .9) * (reduce ? 0 : .05), 0);
+          card.rotation.set(st.rx + ix + px, st.ry + iy + py, iz);
+          var sc = st.s * (mobile() ? .72 : 1);
+          card.scale.setScalar(sc);
+          R.render(scene, cam);
+      }
+
+      loop();
+
+      function buildSw(on) {
+          var box = document.getElementById('sw');
+          VARS.forEach(function (v, i) {
+              var b = document.createElement('button');
+              b.type = 'button';
+              b.setAttribute('aria-pressed', i == 0);
+              b.innerHTML = '<i style="background:' + v.css + '"></i>' + v.n;
+              b.onclick = function () { box.querySelectorAll('button').forEach(function (x, j) { x.setAttribute('aria-pressed', j == i); }); on(i); };
+              box.appendChild(b);
+          });
+      }
+
+      buildSw(function (i) { cur = i; var col = new THREE.Color(VARS[i].c); gsap.to(bodyM.color, { r: col.r, g: col.g, b: col.b, duration: .5 }); bodyM.roughness = i == 1 ? .22 : .3; paint(); });
+  })();
+
+</script>
+
+<script>
+  (function () {
+      /* плавный переход к якорям */
+      document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+          var id = a.getAttribute('href');
+          if (id.length < 2)
+              return;
+          a.addEventListener('click', function (ev) {
+              var el = document.querySelector(id);
+              if (!el)
+                  return;
+              ev.preventDefault();
+              var y0 = scrollY, y1 = el.getBoundingClientRect().top + y0, d = y1 - y0;
+              if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                  scrollTo(0, y1);
+                  return;
+              }
+              var dur = Math.min(2600, Math.max(1100, Math.abs(d) * .35)), t0 = performance.now();
+              if (window.cardJump)
+                  cardJump.start(dur);
+              function f(n) {
+                  var p = Math.min((n - t0) / dur, 1), e = p < .5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+                  scrollTo(0, y0 + d * e);
+                  if (p < 1)
+                      requestAnimationFrame(f);
+                  else {
+                      if (window.cardJump)
+                          cardJump.end();
+                      history.replaceState(null, '', id);
+                  }
+              }
+              requestAnimationFrame(f);
+          });
+      });
+  })();
+
+</script>
+</body>
+</html>
